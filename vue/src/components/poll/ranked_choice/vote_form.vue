@@ -53,6 +53,35 @@ export default {
     numChoices() { return this.stance.poll().minimumStanceChoices; }
   }
 };
+
+
+//workaround to prevent unitended behavior with touch and ranked poll on newer browsers. (Related to support for passive event listeners)
+//slighly modified from https://github.com/zzarcon/default-passive-events/tree/master
+const getWritableOptions = (options) => {
+  const passiveDescriptor = Object.getOwnPropertyDescriptor(options, 'passive');
+    
+  return passiveDescriptor && passiveDescriptor.writable !== true && passiveDescriptor.set === undefined
+    ? Object.assign({}, options)
+    : options;
+};
+
+const overwriteAddEvent = (superMethod) => {
+  EventTarget.prototype.addEventListener = function (type, listener, options) {
+    const usesListenerOptions = typeof options === 'object' && options !== null;
+
+    options         = usesListenerOptions ? getWritableOptions(options) : {};
+    options.passive = false
+
+    superMethod.call(this, type, listener, options);
+  };
+
+  EventTarget.prototype.addEventListener._original = superMethod;
+};
+
+
+const addEvent = EventTarget.prototype.addEventListener;
+overwriteAddEvent(addEvent);
+
 </script>
 
 <template lang='pug'>
